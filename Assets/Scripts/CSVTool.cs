@@ -5,6 +5,8 @@ using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.IO;
 using System.Linq;
+using CsvHelper;
+using System.Globalization;
 
 public class CSVTool
 {
@@ -33,13 +35,11 @@ public class CSVTool
                 string value = values[j];
                 value = value.TrimStart(TRIM_CHARS).TrimEnd(TRIM_CHARS).Replace("\\", "");
                 object finalvalue = value;
-                int n;
-                float f;
-                if (int.TryParse(value, out n))
+                if (int.TryParse(value, out int n))
                 {
                     finalvalue = n;
                 }
-                else if (float.TryParse(value, out f))
+                else if (float.TryParse(value, out float f))
                 {
                     finalvalue = f;
                 }
@@ -50,9 +50,8 @@ public class CSVTool
         return list;
     }
 
-    public static void Write(List<Dictionary<string, string>> data)
+    public static void Write<T>(List<T> data, bool constant)
     {
-        string data_str = ListToString(data);
         string folder;
         if (Application.isEditor)
         {
@@ -64,25 +63,11 @@ public class CSVTool
             folder = Application.persistentDataPath;
         }
 
-        string destination = Path.Combine(folder, DateTime.Now.ToString("yyyy-MM-d--HH-mm-ss") + ".csv");
+        string destination = Path.Combine(folder, DateTime.Now.ToString("yyyy-MM-d--HH-mm-ss") + "_" + (constant ? "constant" : "trigger") + ".csv");
 
-        StreamWriter writer = new StreamWriter(destination, false);
-        writer.Write(data_str);
-        writer.Close();
-
+        using StreamWriter writer = new StreamWriter(destination, false);
+        using CsvWriter csv = new CsvWriter(writer, CultureInfo.InvariantCulture);
+        csv.WriteRecords(data);
     }
 
-    private static string ListToString(List<Dictionary<string, string>> data)
-    {
-        string result = "";
-        if(data.Count >= 1)
-        {
-            result += string.Join(",", data[0].Keys.ToList());
-        }
-        for(int i = 0; i < data.Count; i++)
-        {
-            result += "\n" + string.Join(",", data[i].Values.ToList());
-        }
-        return result;
-    }
 }

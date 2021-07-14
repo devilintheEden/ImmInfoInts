@@ -3,8 +3,10 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-public class SlideIconsVertical : MonoBehaviour, IBeginDragHandler, IDragHandler
+public class SlideIconsVertical : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
 {
+    public int identityNum;
+    public RayCastRecord rayCastRecord;
     public GameObject sphere;
     private Vector3 originalPosition;
     private Vector3 beginRayPosition;
@@ -19,5 +21,10 @@ public class SlideIconsVertical : MonoBehaviour, IBeginDragHandler, IDragHandler
         float target_y = originalPosition.y + (sphere.transform.position - beginRayPosition).y;
         target_y = Mathf.Clamp(target_y, -5, 5);
         transform.position = new Vector3(originalPosition.x, target_y, originalPosition.z);
+    }
+
+    public void OnEndDrag(PointerEventData eventData)
+    {
+        rayCastRecord.WriteDragAction(originalPosition, transform.position, true, identityNum);
     }
 }

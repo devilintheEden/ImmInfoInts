@@ -96,7 +96,6 @@ public class SessionManager : MonoBehaviour
         (keep ? CardSaved : CardDeleted).Add(index);
         CardObjectOnScreen.Remove(card);
         Destroy(card);
-        //UpdateAllCards();
         if (CardLeftNotOnScreen.Count != 0)
         {
             CardLeftOnScreen.Add(CardLeftNotOnScreen[0]);
@@ -116,7 +115,6 @@ public class SessionManager : MonoBehaviour
         }
         CardObjectOnScreen = new List<GameObject>();
         int temp = Mathf.Min(ColumnNum * 3, CardLeft.Count);
-        //CardLeft = CardLeft.GetRange(0, temp);
         CardLeftOnScreen = CardLeft.GetRange(0, temp);
         CardLeftNotOnScreen = CardLeft.GetRange(temp, CardLeft.Count - temp);
         for(int i = 0; i < CardLeftOnScreen.Count; i++)

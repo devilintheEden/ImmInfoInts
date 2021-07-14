@@ -11,24 +11,27 @@ public class SingleCardFunction : MonoBehaviour, IPointerClickHandler, IBeginDra
     public Text URL;
     public Text Snippet;
     public GameObject SidePanel;
+    public GameObject Content;
 
     private Vector3 originalPosition;
     private Vector3 beginRayPosition;
     private GameObject sphere;
     private GameObject savedItems;
     private GameObject deletedItems;
-    private SessionManager SessionManager;
+    private SessionManager sessionManager;
+    private RayCastRecord rayCastRecord;
 
     private bool dragActive = true;
 
-    private int SerialNum;
+    private int serialNum;
 
     public void Start()
     {
         sphere = GameObject.FindGameObjectWithTag("Sphere");
         savedItems = GameObject.FindGameObjectWithTag("VRUISavedItems");
         deletedItems = GameObject.FindGameObjectWithTag("VRUIDeletedItems");
-        SessionManager = GameObject.FindGameObjectWithTag("SessionManager").GetComponent<SessionManager>();
+        sessionManager = GameObject.FindGameObjectWithTag("SessionManager").GetComponent<SessionManager>();
+        rayCastRecord = GameObject.FindGameObjectWithTag("SessionManager").GetComponent<RayCastRecord>();
     }
 
     public void LateStart(int index, Dictionary<string, object> content)
@@ -36,7 +39,8 @@ public class SingleCardFunction : MonoBehaviour, IPointerClickHandler, IBeginDra
         Title.text = (string)content["title"];
         URL.text = (string)content["url"];
         Snippet.text = (string)content["snippet"];
-        SerialNum = index;
+        serialNum = index;
+        Invoke(nameof(UpdateColliderSize), 0.01f);
     }
 
     public void Update()
@@ -50,11 +54,12 @@ public class SingleCardFunction : MonoBehaviour, IPointerClickHandler, IBeginDra
     public void SideButtonActive(bool b)
     {
         SidePanel.SetActive(b);
+        gameObject.GetComponent<BoxCollider>().center = b ? new Vector3(-20, 0, 0) : Vector3.zero;
     }
 
     public void OnBeginDrag(PointerEventData eventData)
     {
-        if (SessionManager.InteractType != InteractMode.Menu)
+        if (sessionManager.InteractType != InteractMode.Menu)
         {
             originalPosition = transform.position;
             beginRayPosition = sphere.transform.position;
@@ -63,7 +68,7 @@ public class SingleCardFunction : MonoBehaviour, IPointerClickHandler, IBeginDra
 
     public void OnDrag(PointerEventData eventData)
     {
-        if (SessionManager.InteractType == InteractMode.Swipe)
+        if (sessionManager.InteractType == InteractMode.Swipe)
         {
             if (dragActive)
             {
@@ -71,6 +76,7 @@ public class SingleCardFunction : MonoBehaviour, IPointerClickHandler, IBeginDra
                 if (delta_x > 1)
                 {
                     delta_x = 1;
+                    rayCastRecord.WriteDragAction(originalPosition, transform.position, true, serialNum);
                     dragActive = false;
                     transform.position = originalPosition;
                     SaveThisCard();
@@ -78,6 +84,7 @@ public class SingleCardFunction : MonoBehaviour, IPointerClickHandler, IBeginDra
                 else if (delta_x < -1)
                 {
                     delta_x = -1;
+                    rayCastRecord.WriteDragAction(originalPosition, transform.position, true, serialNum);
                     dragActive = false;
                     transform.position = originalPosition;
                     DeleteThisCard();
@@ -85,7 +92,7 @@ public class SingleCardFunction : MonoBehaviour, IPointerClickHandler, IBeginDra
                 transform.position = new Vector3(delta_x, 0, 0) + originalPosition;
             }
         }
-        if (SessionManager.InteractType == InteractMode.Place)
+        if (sessionManager.InteractType == InteractMode.Place)
         {
             if (dragActive)
             {
@@ -93,11 +100,13 @@ public class SingleCardFunction : MonoBehaviour, IPointerClickHandler, IBeginDra
                 transform.position = new Vector3(temp.x, temp.y, originalPosition.z);
                 if (Vector3.Distance(transform.position, savedItems.transform.position) <= 1.46f)
                 {
+                    rayCastRecord.WriteDragAction(originalPosition, transform.position, true, serialNum);
                     dragActive = false;
                     SaveThisCard();
                 }
                 if (Vector3.Distance(transform.position, deletedItems.transform.position) <= 1.46f)
                 {
+                    rayCastRecord.WriteDragAction(originalPosition, transform.position, true, serialNum);
                     dragActive = false;
                     DeleteThisCard();
                 }
@@ -107,18 +116,19 @@ public class SingleCardFunction : MonoBehaviour, IPointerClickHandler, IBeginDra
 
     public void OnEndDrag(PointerEventData eventData)
     {
-        if (SessionManager.InteractType != InteractMode.Menu)
+        if (sessionManager.InteractType != InteractMode.Menu)
         {
+            rayCastRecord.WriteDragAction(originalPosition, transform.position, false, serialNum);
             transform.DOMove(originalPosition, Vector3.Distance(transform.position, originalPosition) * 0.1f);
         }
     }
 
     public void OnPointerClick(PointerEventData eventData)
     {
-        if (SessionManager.InteractType == InteractMode.Menu)
+        if (sessionManager.InteractType == InteractMode.Menu)
         {
             bool temp = SidePanel.activeSelf;
-            SessionManager.CancelAllSidePanel();
+            sessionManager.CancelAllSidePanel();
             SideButtonActive(!temp);
         }
     }
@@ -126,12 +136,25 @@ public class SingleCardFunction : MonoBehaviour, IPointerClickHandler, IBeginDra
     public void SaveThisCard()
     {
         SideButtonActive(false);
-        SessionManager.RemoveCard(gameObject, SerialNum, true);
+        rayCastRecord.WriteSaveDeleteAction(serialNum, true);
+        sessionManager.RemoveCard(gameObject, serialNum, true);
     }
 
     public void DeleteThisCard()
     {
         SideButtonActive(false);
-        SessionManager.RemoveCard(gameObject, SerialNum, false);
+        rayCastRecord.WriteSaveDeleteAction(serialNum, false);
+        sessionManager.RemoveCard(gameObject, serialNum, false);
+    }
+
+    private void UpdateColliderSize()
+    {
+        Vector2 temp = Content.GetComponent<RectTransform>().sizeDelta;
+        gameObject.GetComponent<BoxCollider>().size = new Vector3(temp.x, temp.y, 4);
+    }
+
+    public string GetSerialNumString()
+    {
+        return serialNum.ToString();
     }
 }
